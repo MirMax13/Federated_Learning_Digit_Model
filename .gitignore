@@ -1,8 +1,11 @@
-/__pycache__
-/venv
-/checkpoints
-/data_pc
-/data_phone
-/legacy
+/Server/__pycache__
+/Server/venv
+/Server/checkpoints
+/Server/data_pc
+/Server/data_phone
+/Server/legacy
+/Server/saved
+/Server/checkpoint.ckpt
 config.txt
+
 network_security_config.xml

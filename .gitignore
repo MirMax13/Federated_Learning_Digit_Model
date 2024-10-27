@@ -1,0 +1,8 @@
+/__pycache__
+/venv
+/checkpoints
+/data_pc
+/data_phone
+/legacy
+config.txt
+network_security_config.xml

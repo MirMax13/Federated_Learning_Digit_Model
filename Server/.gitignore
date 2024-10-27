@@ -1,0 +1,10 @@
+/classifier_model
+/__pycache__
+/checkpoints
+/data_pc
+/data_phone
+/legacy
+/saved
+/checkpoint.ckpt
+/venv
+classifier_model.tflite

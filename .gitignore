@@ -1,11 +1,5 @@
-/Server/__pycache__
-/Server/venv
-/Server/checkpoints
-/Server/data_pc
-/Server/data_phone
-/Server/legacy
-/Server/saved
-/Server/checkpoint.ckpt
+
 config.txt
+classifier_model.tflite
 
 network_security_config.xml

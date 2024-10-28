@@ -91,46 +91,29 @@ public class MainActivity extends AppCompatActivity {
 
         imageView=findViewById(R.id.imageView);
 
-        camera.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                if(checkSelfPermission(Manifest.permission.CAMERA)== PackageManager.PERMISSION_GRANTED){
-                    Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-                    startActivityForResult(cameraIntent,3);
-                }
-                else{
-                    requestPermissions(new String[]{Manifest.permission.CAMERA},100);
-                }
+        camera.setOnClickListener(view -> {
+            if(checkSelfPermission(Manifest.permission.CAMERA)== PackageManager.PERMISSION_GRANTED){
+                Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                startActivityForResult(cameraIntent,3);
+            }
+            else{
+                requestPermissions(new String[]{Manifest.permission.CAMERA},100);
             }
         });
-        gallery.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent galleryIntent = new Intent(Intent.ACTION_PICK,MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-                startActivityForResult(galleryIntent,2);
-            }
+        gallery.setOnClickListener(view -> {
+            Intent galleryIntent = new Intent(Intent.ACTION_PICK,MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+            startActivityForResult(galleryIntent,2);
         });
-        train_gallery.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
+        train_gallery.setOnClickListener(v -> {
 
-                Intent folderPickerIntent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
-                startActivityForResult(folderPickerIntent, 6);
-            }
+            Intent folderPickerIntent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+            startActivityForResult(folderPickerIntent, 6);
         });
-        send.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                System.out.println("Starting sending weights");
-                sendWeightsToServer();
-            }
+        send.setOnClickListener(v -> {
+            System.out.println("Starting sending weights");
+            sendWeightsToServer();
         });
-        load.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                loadModel();
-            }
-        });
+        load.setOnClickListener(v -> loadModel());
     }
     @Override
     protected void onDestroy() {

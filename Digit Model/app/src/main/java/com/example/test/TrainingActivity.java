@@ -24,20 +24,16 @@ public class TrainingActivity extends AppCompatActivity {
         trainingProgress = findViewById(R.id.progressText);
 
         Button cancelButton = findViewById(R.id.cancel_training_button);
-        cancelButton.setOnClickListener(v -> {
-            new AlertDialog.Builder(this)
-                    .setMessage("Are you sure you want to cancel the workout? The training results will be lost")
-                    .setPositiveButton("Yes, cancel", (dialog, which) -> {
-                        Intent intent = new Intent("CANCEL_TRAINING");
-                        LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
-                        finish();
-                    })
-                    .setNegativeButton("No, return", (dialog, which) -> {
-                        dialog.dismiss();
-                    })
-                    .create()
-                    .show();
-        });
+        cancelButton.setOnClickListener(v -> new AlertDialog.Builder(this)
+                .setMessage("Are you sure you want to cancel the workout? The training results will be lost")
+                .setPositiveButton("Yes, cancel", (dialog, which) -> {
+                    Intent intent = new Intent("CANCEL_TRAINING");
+                    LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+                    finish();
+                })
+                .setNegativeButton("No, return", (dialog, which) -> dialog.dismiss())
+                .create()
+                .show());
 
     }
 

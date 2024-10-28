@@ -4,7 +4,6 @@ import numpy as np
 import os
 import random
 import string
-from PIL import Image
 import shutil as sh
 from digit_model import Classifier
 
@@ -20,7 +19,6 @@ SAVED_MODEL_DIR_FE = "feature_extractor_model"
 SAVED_MODEL_DIR_CL = "classifier_model"
 
 fe_model = tf.saved_model.load(SAVED_MODEL_DIR_FE)
-# cl_model = tf.saved_model.load(SAVED_MODEL_DIR_CL)
 num_classes = 10
 cl_model = Classifier(num_classes)
 img_size = 28
@@ -60,7 +58,6 @@ def aggregate():
     avg_weights = [np.mean(weights, axis=0) for weights in zip(*all_weights)]
     
     cl_model.model.set_weights(avg_weights)
-    cl_model.save("av_device_pc_2_epochs.ckpt")
 
 def save_model():
     tf.saved_model.save(

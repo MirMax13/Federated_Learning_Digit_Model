@@ -179,8 +179,6 @@ public class MainActivity extends AppCompatActivity {
                     OkHttpClient client = new OkHttpClient();
                     String serverIp = serverIp();
                     String url = String.format("http://%s:5000/load_model", serverIp);
-                    System.out.println("Building request to "+ url);
-                    // Build the request
                     Request request = new Request.Builder()
                             .url(url)
                             .build();
@@ -228,7 +226,6 @@ public class MainActivity extends AppCompatActivity {
             }
         }.execute();
     }
-
     private void sendWeightsToServer() {
         try {
             File checkpointFile = new File(getFilesDir(), "checkpoint.ckpt");
@@ -249,7 +246,6 @@ public class MainActivity extends AppCompatActivity {
             RequestBody requestBody = RequestBody.create(MediaType.parse("application/octet-stream"),modelWeights);
             String serverIp = serverIp();
             String url = String.format("http://%s:5000/upload-weights", serverIp);
-            System.out.println("Building request to "+ url);
             Request request = new Request.Builder()
                     .url(url)
                     .post(requestBody)
@@ -277,7 +273,6 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
     }
-
     private void copyModelFromAssetsIfNecessary(String modelFileName) {
         File modelFile = new File(getFilesDir(), modelFileName);
 
@@ -528,104 +523,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // Main function to classify an image and update the model via training
-    public void classifyAndTrain(List<Bitmap> images, String correctClass) {
-        try {
-            String Cl_modelFileName = "classifier_model.tflite";
-            String FE_modelFileName = "feature_extractor_model.tflite";
-            copyModelFromAssetsIfNecessary(Cl_modelFileName);
-            copyModelFromAssetsIfNecessary(FE_modelFileName);
-
-            File featureExtractorFile = new File(getFilesDir(), FE_modelFileName);
-            File classifierFile = new File(getFilesDir(), Cl_modelFileName);
-
-            if (!featureExtractorFile.exists()) {
-                System.out.println("TFLite model file '" + FE_modelFileName + "' not found.");
-                return;
-            }
-            if (!classifierFile.exists()) {
-                System.out.println("TFLite model file '" + Cl_modelFileName + "' not found.");
-                return;
-            }
-            System.out.println("TFLite models found, proceeding...");
-
-
-            FileInputStream FEInputStream = new FileInputStream(featureExtractorFile);
-            FileChannel FEChannel = FEInputStream.getChannel();
-            MappedByteBuffer featureExtractorModel = FEChannel.map(FileChannel.MapMode.READ_ONLY, 0, FEChannel.size());
-
-            FileInputStream ClInputStream = new FileInputStream(classifierFile);
-            FileChannel ClChannel = ClInputStream.getChannel();
-            MappedByteBuffer classifierModel = ClChannel.map(FileChannel.MapMode.READ_ONLY, 0, ClChannel.size());
-
-            Interpreter.Options options = new Interpreter.Options();
-            options.setNumThreads(4);
-
-            Interpreter FEInterpreter = new Interpreter(featureExtractorModel, options);
-            Interpreter ClInterpreter = new Interpreter(classifierModel, options);
-
-            System.out.println("Models loaded successfully.");
-
-            File checkpointFile = new File(getFilesDir(), "checkpoint.ckpt");
-            if (checkpointFile.exists()) {
-                restoreCheckpoint(ClInterpreter);
-                System.out.println("Checkpoint restored.");
-            }else {
-                System.out.println("No checkpoint found. Starting with initial weights.");
-            }
-
-            int correctLabel = getClassIndex(correctClass);
-            System.out.println("label index "+correctLabel);
-
-            ByteBuffer labelBuffer = ByteBuffer.allocate(4*10).order(ByteOrder.nativeOrder());
-            labelBuffer.putInt(correctLabel);
-            labelBuffer.rewind();
-            System.out.println("label buffer "+labelBuffer);
-
-            // Prepare output loss
-            FloatBuffer lossBuffer = FloatBuffer.allocate(1);
-
-            int numEpochs =8;
-
-            float[] losses = new float[numEpochs];
-            // Training loop
-            for (int epoch = 0; epoch < numEpochs; ++epoch) {
-                for (Bitmap image : images) {
-                    ByteBuffer byteBuffer = preprocessImage(image);
-
-                    TensorBuffer extractedFeatures = TensorBuffer.createFixedSize(new int[]{1, 1024}, DataType.FLOAT32);
-                    FEInterpreter.run(byteBuffer, extractedFeatures.getBuffer());
-
-                    // Prepare inputs for the train signature
-                    Map<String, Object> inputs = new HashMap<>();
-                    inputs.put("x", extractedFeatures.getBuffer());
-                    inputs.put("y", labelBuffer); // True label
-
-                    Map<String, Object> outputs = new HashMap<>();
-                    outputs.put("loss", lossBuffer);
-                    ClInterpreter.runSignature(inputs, outputs, "train");
-                    losses[epoch] = lossBuffer.get(0);
-                    lossBuffer.rewind(); // Reset buffer after each use
-                    System.out.println("Epoch: " + epoch + ", Loss: " + losses[epoch]);
-                    if (epoch ==numEpochs-1){
-                        performInference(FEInterpreter,ClInterpreter,byteBuffer);
-                    }
-                }
-            }
-
-            saveCheckpoint(ClInterpreter);
-            System.out.println("Training completed. Checkpoint saved.");
-
-//            System.out.println("Inference after training");
-//            performInference(FEInterpreter,ClInterpreter,byteBuffer);
-
-            FEInterpreter.close();
-            ClInterpreter.close();
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
     private void performInference(Interpreter featureExtractor, Interpreter classifier, ByteBuffer input) {
         try {
             System.out.println("Input shape: " + Arrays.toString(featureExtractor.getInputTensor(0).shape()));

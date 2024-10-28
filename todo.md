@@ -18,6 +18,8 @@
 - [ ] **Delete weights after load**: `8` 🟠
 - [ ] **Refactor code**: `2` 🟠
 - [x] **Change model to predict digits** `7` 🔴⚪
-- [ ] **Implement Batch Size** `8` 🔴⚪
+- [-] **Implement Batch Size** `8` 🔴⚪
 - [x] **Use env file or smth else for IP** `8` 🔵🟤
 - [x] **Deploy project on github** `9` 🟤
+- [ ] **Deploy project** `4` 🟤
+- [ ] **Handle Errors** `6` 🟠🔵🟡

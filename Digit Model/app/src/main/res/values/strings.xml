@@ -1,3 +1,17 @@
 <resources>
     <string name="app_name">Digit Model</string>
+    <string name="learning_process_ongoing">The learning process is ongoing…</string>
+    <string name="training_progress">Training progress</string>
+    <string name="cancel_training">Cancel Training</string>
+    <string name="send">Send weights</string>
+    <string name="load">Load new model</string>
+    <string name="train">Train</string>
+    <string name="take_picture">Take Picture</string>
+    <string name="launch_gallery">Launch Gallery</string>
+    <string name="classify">Classified as:</string>
+    <string name="training_phase_message">Phase %1$d - Epoch %2$d/%3$d: %4$.1f%% complete (%5$d/%6$d samples) | Time: %7$ds</string>
+    <string name="phase_epoch_summary">Phase %1$d - Epoch %2$d/%3$d completed | Successful: %4$d | Failed: %5$d</string>
+    <string name="cancel_training_message">Are you sure you want to cancel the workout? The training results will be lost</string>
+    <string name="positive_button_text">Yes, cancel</string>
+    <string name="negative_button_text">No, return</string>
 </resources>

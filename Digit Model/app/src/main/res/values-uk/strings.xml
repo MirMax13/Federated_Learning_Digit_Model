@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Digit Model</string>
+    <string name="learning_process_ongoing">Процес навчання триває…</string>
+    <string name="training_progress">Прогрес навчання</string>
+    <string name="cancel_training">Відмінити навчання</string>
+    <string name="send">Відправити ваги</string>
+    <string name="load">Завантажити нову модель</string>
+    <string name="train">Навчати</string>
+    <string name="take_picture">Зробити фото</string>
+    <string name="launch_gallery">Відкрити галерею</string>
+    <string name="classify">Класифікується як:</string>
+    <string name="training_phase_message">Фаза %1$d - Епоха %2$d/%3$d: %4$.1f%% завершено (%5$d/%6$d зразків) | Час: %7$ds</string>
+    <string name="phase_epoch_summary">Фаза %1$d - Епоха %2$d/%3$d завершена | Успішно: %4$d | Неуспішно: %5$d</string>
+    <string name="cancel_training_message">Ви впевнені, що хочете відмінити тренування? Результати тренування будуть втрачені</string>
+    <string name="positive_button_text">Так, скасувати</string>
+    <string name="negative_button_text">Ні, повернутися</string>
+</resources>

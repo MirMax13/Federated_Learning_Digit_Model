@@ -47,6 +47,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.io.File;
 import java.util.Objects;
@@ -522,9 +523,15 @@ public class MainActivity extends AppCompatActivity {
                         long elapsedSeconds = (System.currentTimeMillis() - epochStartTime) / 1000;
 
                         String message = String.format(
-                                "Phase %d - Epoch %d/%d: %.1f%% complete (%d/%d samples) | Time: %ds",
-                                phase.getPhaseNumber(), epoch + 1, numEpochs, progress,
-                                i + 1, phaseSamples.size(), elapsedSeconds
+                                Locale.getDefault(),
+                                getString(R.string.training_phase_message),
+                                phase.getPhaseNumber(),
+                                epoch + 1,
+                                numEpochs,
+                                progress,
+                                i + 1,
+                                phaseSamples.size(),
+                                elapsedSeconds
                         );
                         System.out.println(message);
                         updateTrainingProgress(message);
@@ -536,8 +543,13 @@ public class MainActivity extends AppCompatActivity {
             }
 
             System.out.println(String.format(
-                    "\nPhase %d - Epoch %d/%d completed | Successful: %d | Failed: %d",
-                    phase.getPhaseNumber(), epoch + 1, numEpochs, successfulSamples, failedSamples
+                    Locale.getDefault(),
+                    getString(R.string.phase_epoch_summary),
+                    phase.getPhaseNumber(),
+                    epoch + 1,
+                    numEpochs,
+                    successfulSamples,
+                    failedSamples
             ));
         }
     }

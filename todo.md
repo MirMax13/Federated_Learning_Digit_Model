@@ -23,6 +23,6 @@
 - [x] **Deploy project on github** `9` 🟤
 - [ ] **Deploy project** `4` 🟤
 - [ ] **Handle Errors** `6` 🟠🔵🟡
-- [ ] **Add language selection** `5` 🟢🟡
+- [x] **Add language localization** `5` 🟢🟡
 - [ ] **Add theme selection** `5` 🟢🟡
 - [ ] **Add logo** `5` 🟡

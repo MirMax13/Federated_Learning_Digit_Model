@@ -1,6 +1,7 @@
 package com.example.test;
 
 import android.annotation.SuppressLint;
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -13,7 +14,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.MediaStore;
-import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -43,7 +43,6 @@ import java.nio.FloatBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -65,7 +64,6 @@ import okhttp3.Response;
 
 public class MainActivity extends AppCompatActivity {
     private static MainActivity instance;
-
     public static MainActivity getInstance() {
         return instance;
     }
@@ -133,8 +131,6 @@ public class MainActivity extends AppCompatActivity {
             is.close();
             serverIp = new String(buffer);
             serverIp = serverIp.trim();
-
-
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -142,43 +138,17 @@ public class MainActivity extends AppCompatActivity {
     }
     @SuppressLint("StaticFieldLeak")
     private void loadModel() {
-        new  AsyncTask<Void, String, Boolean>() {
+        new AsyncTask<Void, Void, Boolean>() {
+            private String message;
+
+            @Override
+            protected void onPreExecute() {
+                showLoadingDialog(getString(R.string.loading_model));
+            }
+
             @Override
             protected Boolean doInBackground(Void... voids) {
-                System.out.println("Starting loadModel() method");
                 try {
-                    File checkpointFile = new File(getFilesDir(), "checkpoint.ckpt");
-                    if (checkpointFile.exists()) {
-                        boolean deleted = checkpointFile.delete();
-                        if (deleted) {
-                            System.out.println("Checkpoint file deleted successfully");
-                        } else {
-                            System.out.println("Failed to delete checkpoint file");
-                        }
-                    }
-
-                    File modelFile = new File(getFilesDir(), "classifier_model.tflite");
-                    if (modelFile.exists()) {
-                        boolean deleted = modelFile.delete();
-                        if (deleted) {
-                            System.out.println("Existing classifier_model.tflite file deleted successfully");
-                        } else {
-                            System.out.println("Failed to delete existing classifier_model.tflite file");
-                            return false;
-                        }
-                    }
-
-                    File modelFile2 = new File(getFilesDir(), "feature_extractor_model.tflite");
-                    if (modelFile2.exists()) {
-                        boolean deleted = modelFile2.delete();
-                        if (deleted) {
-                            System.out.println("Existing feature_extractor_model.tflite file deleted successfully");
-                        } else {
-                            System.out.println("Failed to delete existing feature_extractor_model.tflite file");
-                            return false;
-                        }
-                    }
-                    System.out.println("Initializing OkHttpClient");
                     OkHttpClient client = new OkHttpClient();
                     String serverIp = serverIp();
                     String url = String.format("http://%s:5000/load_model", serverIp);
@@ -186,55 +156,89 @@ public class MainActivity extends AppCompatActivity {
                             .url(url)
                             .build();
 
-                    System.out.println("Executing request...");
                     Response response = client.newCall(request).execute();
-
                     if (!response.isSuccessful()) {
-                        throw new IOException("Unexpected code " + response);
+                        message = getString(R.string.failed_to_download_model, response.message());
+                        return false;
                     }
-                    System.out.println("Request successful. Response code: " + response.code());
 
+                    deleteFileIfExists(new File(getFilesDir(), "checkpoint.ckpt"));
+                    deleteFileIfExists(new File(getFilesDir(), "classifier_model.tflite"));
 
-                    System.out.println("Preparing to write model file to: " + modelFile.getAbsolutePath());
+                    File modelFile = new File(getFilesDir(), "classifier_model.tflite");
                     FileOutputStream fos = new FileOutputStream(modelFile);
-                    System.out.println("Writing bytes to model file");
                     assert response.body() != null;
                     fos.write(response.body().bytes());
                     fos.close();
-                    System.out.println("Model file written successfully");
+
                     if (modelFile.length() == 0) {
-                        System.out.println("Downloaded model file is empty");
+                        message = getString(R.string.downloaded_model_empty);
                         return false;
                     }
-                    FileInputStream fis = new FileInputStream(modelFile);
-                    byte[] header = new byte[10];
-                    fis.read(header);
-                    fis.close();
-                    System.out.println("File header (first 10 bytes): " + Arrays.toString(header));
 
-                    try {
-                        Interpreter tflite = new Interpreter(modelFile);
-                        System.out.println("Model loaded successfully immediately after download");
-                        tflite.close();
+                    try (Interpreter tflite = new Interpreter(modelFile)) {
+                        message = getString(R.string.model_downloaded_successfully);
                     } catch (Exception e) {
-                        System.out.println("Error loading model immediately after download: " + e.getMessage());
-                        e.printStackTrace();
+                        message = getString(R.string.error_loading_model, e.getMessage());
+                        return false;
                     }
 
                     return true;
                 } catch (IOException e) {
-                    System.out.println("Error: " + e.getMessage());
-                    e.printStackTrace();
+                    message = getString(R.string.error_generic, e.getMessage());
                     return false;
                 }
             }
+
+            @Override
+            protected void onPostExecute(Boolean isSuccess) {
+                hideLoadingDialog();
+
+                showResultDialog(
+                        isSuccess ? getString(R.string.success_title) : getString(R.string.error_title),
+                        message
+                );
+            }
         }.execute();
+    }
+
+    private void deleteFileIfExists(File file) {
+        if (file.exists()) {
+            boolean deleted = file.delete();
+            System.out.println(deleted ? file.getName() + " deleted successfully" : "Failed to delete " + file.getName());
+        }
+    }
+
+    private AlertDialog loadingDialog;
+
+    private void showLoadingDialog(String message) {
+        if (loadingDialog == null) {
+            loadingDialog = new AlertDialog.Builder(this)
+                    .setCancelable(false)
+                    .setMessage(message)
+                    .create();
+        }
+        loadingDialog.show();
+    }
+
+    private void hideLoadingDialog() {
+        if (loadingDialog != null && loadingDialog.isShowing()) {
+            loadingDialog.dismiss();
+        }
+    }
+
+    private void showResultDialog(String title, String message) {
+        new AlertDialog.Builder(this)
+                .setTitle(title)
+                .setMessage(message)
+                .setPositiveButton("OK", null)
+                .show();
     }
     private void sendWeightsToServer() {
         try {
             File checkpointFile = new File(getFilesDir(), "checkpoint.ckpt");
             if (!checkpointFile.exists()) {
-                System.err.println("Checkpoint file not found: " + checkpointFile.getAbsolutePath());
+                showResultDialog("Error", "Checkpoint file not found: " + checkpointFile.getAbsolutePath());
                 return;
             }
             System.out.println("Checkpoint file found: " + checkpointFile.getAbsolutePath());
@@ -247,7 +251,7 @@ public class MainActivity extends AppCompatActivity {
             System.out.println("Weights successfully read from file, size: " + modelWeights.length + " bytes.");
 
             OkHttpClient client = new OkHttpClient();
-            RequestBody requestBody = RequestBody.create(MediaType.parse("application/octet-stream"),modelWeights);
+            RequestBody requestBody = RequestBody.create(MediaType.parse("application/octet-stream"), modelWeights);
             String serverIp = serverIp();
             String url = String.format("http://%s:5000/upload-weights", serverIp);
             Request request = new Request.Builder()
@@ -255,26 +259,33 @@ public class MainActivity extends AppCompatActivity {
                     .post(requestBody)
                     .build();
 
+            String errorSendingWeights = getString(R.string.error_sending_weights);
             client.newCall(request).enqueue(new Callback() {
                 @Override
                 public void onFailure(@NonNull Call call, @NonNull IOException e) {
                     System.err.println("Error sending weights: " + e.getMessage());
                     e.printStackTrace();
+
+                    runOnUiThread(() -> showResultDialog(getString(R.string.error_title), errorSendingWeights + e.getMessage()));
                 }
 
                 @Override
                 public void onResponse(@NonNull Call call, @NonNull Response response) {
                     if (response.isSuccessful()) {
                         System.out.println("Weights successfully sent to the server.");
+                        String weightsSentSuccessfully = getString(R.string.weights_sent_successfully);
+                        runOnUiThread(() -> showResultDialog(getString(R.string.success_title), weightsSentSuccessfully));
                     } else {
-                        System.err.println("Failed to send weights: " + response.message());
+                        System.err.println("Failed to send weights: " + response.message());runOnUiThread(() -> showResultDialog(getString(R.string.error_title), errorSendingWeights + response.message()));
                     }
                 }
             });
 
         } catch (IOException e) {
-            System.err.println("IOException occurred: " + e.getMessage());
+            String ioExceptionOccurred = getString(R.string.error_generic);
+            System.err.println(ioExceptionOccurred + e.getMessage());
             e.printStackTrace();
+            showResultDialog(getString(R.string.error_title), ioExceptionOccurred + e.getMessage());
         }
     }
     private void copyModelFromAssetsIfNecessary(String modelFileName) {
@@ -314,10 +325,12 @@ public class MainActivity extends AppCompatActivity {
             if (!featureExtractorFile.exists()) {
                 System.out.println("TFLite model file '" + FE_modelFileName + "' not found.");
                 return;
+                //TODO: Handle error
             }
             if (!classifierFile.exists()) {
                 System.out.println("TFLite model file '" + Cl_modelFileName + "' not found.");
                 return;
+                //TODO: Handle error
             }
             System.out.println("TFLite models found, proceeding...");
 
@@ -336,10 +349,8 @@ public class MainActivity extends AppCompatActivity {
             Interpreter FEInterpreter = new Interpreter(featureExtractorModel, options);
             Interpreter ClInterpreter = new Interpreter(classifierModel, options);
 
-
             System.out.println("Models loaded successfully.");
 
-            // Load checkpoint if exists
             File checkpointFile = new File(getFilesDir(), "checkpoint.ckpt");
             if (checkpointFile.exists()) {
                 restoreCheckpoint(ClInterpreter);
@@ -350,7 +361,6 @@ public class MainActivity extends AppCompatActivity {
 
             ByteBuffer byteBuffer = preprocessImage(image);
             System.out.println("Input ByteBuffer size: " + byteBuffer.capacity());
-
             performInference(FEInterpreter, ClInterpreter, byteBuffer);
 
             FEInterpreter.close();
@@ -361,12 +371,225 @@ public class MainActivity extends AppCompatActivity {
 
         } catch (IOException e) {
             e.printStackTrace();
-            System.out.println("Error: " + e.getMessage());
+            System.out.println("Error: " + e.getMessage()); //TODO: Handle error
         } catch (Exception e) {
             e.printStackTrace();
-            System.out.println("Unexpected error: " + e.getMessage());
+            System.out.println("Unexpected error: " + e.getMessage()); //TODO: Handle error
         }
     }
+
+    public void classifyAndTrainOnAllClasses2(DocumentFile directory) {
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        Handler handler = new Handler(Looper.getMainLooper());
+        executor.execute(() -> {
+            try {
+                isTrainingCanceled = false;
+                startTrainingScreen();
+                String Cl_modelFileName = "classifier_model.tflite";
+                String FE_modelFileName = "feature_extractor_model.tflite";
+                copyModelFromAssetsIfNecessary(Cl_modelFileName);
+                copyModelFromAssetsIfNecessary(FE_modelFileName);
+
+                File featureExtractorFile = new File(getFilesDir(), FE_modelFileName);
+                File classifierFile = new File(getFilesDir(), Cl_modelFileName);
+
+                if (!featureExtractorFile.exists() || !classifierFile.exists()) {
+                    System.out.println("Required model files not found.");
+                    return; //TODO: Handle error
+                }
+                System.out.println("TFLite models found, proceeding...");
+
+                Interpreter.Options options = new Interpreter.Options();
+                options.setNumThreads(4);
+
+                Interpreter FEInterpreter = new Interpreter(loadModelBuffer(featureExtractorFile), options);
+                Interpreter ClInterpreter = new Interpreter(loadModelBuffer(classifierFile), options);
+
+                System.out.println("Models loaded successfully.");
+
+                File checkpointFile = new File(getFilesDir(), "checkpoint.ckpt");
+                if (checkpointFile.exists()) {
+                    System.out.println("Found checkpoint file, restoring...");
+                    restoreCheckpoint(ClInterpreter);
+                } else {
+                    System.out.println("No checkpoint file found, starting fresh training.");
+                }
+
+                List<TrainingSample> allSamples = new ArrayList<>();
+                DocumentFile[] classDirs = directory.listFiles();
+
+                System.out.println("Scanning directory structure...");
+                System.out.println("Found " + classDirs.length + " class directories");
+
+                Map<Integer, Integer> classImageCounts = new HashMap<>();
+                for (DocumentFile classDir : classDirs) {
+                    if (isTrainingCanceled) break;
+                    if (!classDir.isDirectory()) continue;
+
+                    int correctLabel = Integer.parseInt(classDir.getName());
+                    DocumentFile[] imageFiles = classDir.listFiles();
+
+                    if (imageFiles.length == 0) {
+                        cancelTraining();
+                        String folder_length_error_message = String.format(
+                                Locale.getDefault(),
+                                getString(R.string.folder_length_error_message),
+                                correctLabel
+                        );
+                        handler.post(() -> {
+                            if (TrainingActivity.getInstance() != null) {
+                                TrainingActivity.getInstance().checkAndShowErrorDialog(folder_length_error_message);
+                            } else {
+                                System.out.println("TrainingActivity instance not found.");
+                            }
+                        });
+                        System.out.println(folder_length_error_message);
+                        return;
+                    }
+
+                    int classImages = 0;
+                    for (DocumentFile imageFile : imageFiles) {
+                        if (isTrainingCanceled) break;
+                        if (!imageFile.isFile()) continue;
+                        allSamples.add(new TrainingSample(imageFile, correctLabel));
+                        classImages++;
+                    }
+                    classImageCounts.put(correctLabel, classImages);
+                    String message = String.format(
+                            Locale.getDefault(),
+                            getString(R.string.class_preparing),
+                            correctLabel,
+                            classImages
+                    );
+                    System.out.println(message);
+                    updateTrainingProgress(message);
+                }
+                for (Map.Entry<Integer, Integer> entry : classImageCounts.entrySet()) {
+                    if (entry.getValue() < 100) {
+                        cancelTraining();
+                        String class_length_error_message = String.format(
+                                Locale.getDefault(),
+                                getString(R.string.class_length_error_message),
+                                entry.getKey()
+                        );
+                        handler.post(() -> {
+                            if (TrainingActivity.getInstance() != null) {
+                                TrainingActivity.getInstance().checkAndShowErrorDialog(class_length_error_message);
+                            } else {
+                                System.out.println("TrainingActivity instance not found.");
+                            }
+                        });
+                        System.out.println(class_length_error_message);
+                        return;
+                    }
+                }
+                int minImages = Collections.min(classImageCounts.values());
+                int maxImages = Collections.max(classImageCounts.values());
+                if ((double) maxImages / minImages > 4.5) {
+                    int difference = maxImages/ minImages;
+                    cancelTraining();
+                    String difference_error_message = String.format(
+                            Locale.getDefault(),
+                            getString(R.string.difference_error_message),
+                            difference
+                    );
+                    handler.post(() -> {
+                        if (TrainingActivity.getInstance() != null) {
+                            TrainingActivity.getInstance().checkAndShowErrorDialog(difference_error_message);
+                        } else {
+                            System.out.println("TrainingActivity instance not found.");
+                        }
+                    });
+                    System.out.println(difference_error_message);
+                    return;
+                }
+
+                int totalSamples = allSamples.size();
+                System.out.println("Total samples collected: " + totalSamples);
+
+                int numEpochs = 2;
+                Random random = new Random();
+
+                for (int epoch = 0; epoch < numEpochs; ++epoch) {
+                    if (isTrainingCanceled) break;
+                    // Shuffle all samples before each epoch
+                    Collections.shuffle(allSamples, random);
+                    long epochStartTime = System.currentTimeMillis();
+
+                    for (int i = 0; i < allSamples.size(); i++) {
+                        if (isTrainingCanceled) break;
+                        TrainingSample sample = allSamples.get(i);
+
+                        ByteBuffer labelBuffer = ByteBuffer.allocateDirect(4 * 10).order(ByteOrder.nativeOrder());
+                        for (int j = 0; j < 10; j++) {
+                            if (isTrainingCanceled) break;
+                            labelBuffer.putFloat(0.0f);
+                        }
+                        labelBuffer.rewind();
+                        labelBuffer.position(4 * sample.label); // Move to the correct position (4 bytes per float)
+                        labelBuffer.putFloat(1.0f);
+                        labelBuffer.rewind();
+
+                        try (InputStream inputStream = getContentResolver().openInputStream(sample.imageFile.getUri())) {
+                            Bitmap image = BitmapFactory.decodeStream(inputStream);
+                            ByteBuffer byteBuffer = preprocessImage(image);
+
+                            TensorBuffer extractedFeatures = TensorBuffer.createFixedSize(new int[]{1, 1024}, DataType.FLOAT32);
+                            FEInterpreter.run(byteBuffer, extractedFeatures.getBuffer());
+
+                            Map<String, Object> inputs = new HashMap<>();
+                            inputs.put("x", extractedFeatures.getBuffer());
+                            inputs.put("y", labelBuffer);
+
+                            Map<String, Object> outputs = new HashMap<>();
+                            outputs.put("loss", FloatBuffer.allocate(1));
+                            ClInterpreter.runSignature(inputs, outputs, "train");
+
+                            if (i % 10 == 0 || i == allSamples.size() - 1) {
+                                float progress = (float) i / allSamples.size() * 100;
+                                long currentTime = System.currentTimeMillis();
+                                long elapsedSeconds = (currentTime - epochStartTime) / 1000;
+
+                                String message = String.format(
+                                        Locale.getDefault(),
+                                        getString(R.string.training_message),
+                                        epoch + 1,
+                                        numEpochs,
+                                        progress,
+                                        i + 1,
+                                        allSamples.size(),
+                                        elapsedSeconds
+                                );
+                                System.out.println(message);
+                                updateTrainingProgress(message);
+                            }
+                        } catch (IOException e) { //TODO: Handle error
+                            System.out.println("Error processing sample from class " + sample.label + ": " + e.getMessage());
+                            e.printStackTrace();
+                        }
+                    }
+
+                }
+
+                if (!isTrainingCanceled) { //TODO: Handle output
+                    System.out.println("\nTraining completed. Saving checkpoint...");
+                    saveCheckpoint(ClInterpreter);
+                }
+                else{
+                    System.out.println("Training process is stopped");
+                }
+                FEInterpreter.close();
+                ClInterpreter.close();
+                handler.post(this::finishTraining);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            finally {
+                executor.shutdown();
+            }
+        });
+    }
+
     public void classifyAndTrainOnAllClasses(DocumentFile directory) {
         ExecutorService executor = Executors.newSingleThreadExecutor();
         Handler handler = new Handler(Looper.getMainLooper());
@@ -385,13 +608,16 @@ public class MainActivity extends AppCompatActivity {
 
                 if (!featureExtractorFile.exists() || !classifierFile.exists()) {
                     System.out.println("Required model files not found.");
-                    return;
+                    return; //TODO: Handle (same)
                 }
 
                 // Collect all samples first
                 List<TrainingSample> allSamples = new ArrayList<>();
                 DocumentFile[] classDirs = directory.listFiles();
                 System.out.println("Scanning directory structure...");
+                System.out.println("Found " + classDirs.length + " class directories");
+
+                Map<Integer, Integer> classImageCounts = new HashMap<>();
                 for (DocumentFile classDir : classDirs) {
                     if (isTrainingCanceled) break;
                     if (!classDir.isDirectory()) continue;
@@ -399,22 +625,51 @@ public class MainActivity extends AppCompatActivity {
                     int correctLabel = Integer.parseInt(classDir.getName());
                     DocumentFile[] imageFiles = classDir.listFiles();
 
+                    if (imageFiles.length == 0) { //TODO: Handle (same)
+                        System.out.println("Class " + correctLabel + " has no images. Training aborted.");
+                        cancelTraining();
+                        return;
+                    }
+
+                    int classImages = 0;
                     for (DocumentFile imageFile : imageFiles) {
                         if (isTrainingCanceled) break;
                         if (!imageFile.isFile()) continue;
                         allSamples.add(new TrainingSample(imageFile, correctLabel));
+                        classImages++;
                     }
+                    classImageCounts.put(correctLabel, classImages);
+                    String message = String.format(
+                            Locale.getDefault(),
+                            getString(R.string.class_preparing),
+                            correctLabel,
+                            classImages
+                    );
+                    System.out.println(message);
+                    updateTrainingProgress(message);
                 }
 
-                // Shuffle all samples once
+                for (Map.Entry<Integer, Integer> entry : classImageCounts.entrySet()) { //TODO: Handle (same)
+                    if (entry.getValue() < 100) {
+                        System.out.println("Class " + entry.getKey() + " has less than 100 images. Training aborted.");
+                        cancelTraining();
+                        return;
+                    }
+                }
+                int minImages = Collections.min(classImageCounts.values());
+                int maxImages = Collections.max(classImageCounts.values());
+                if ((double) maxImages / minImages > 4.5) { //TODO: Handle (same)
+                    System.out.println("Difference between classes is too large. Training aborted.");
+                    cancelTraining();
+                    return;
+                }
+
                 Collections.shuffle(allSamples, new Random());
 
-                // Create training phases
                 List<TrainingPhase> trainingPhases = new ArrayList<>();
                 int totalSamples = allSamples.size();
                 System.out.println("Total samples collected: " + totalSamples);
 
-                // Define phase sizes
                 int phase1Size = 4000;
                 int phase2Size = 3000;
                 int phase3Size = 3000;
@@ -457,18 +712,16 @@ public class MainActivity extends AppCompatActivity {
                             System.out.println("Failed to delete checkpoint file");
                         }
                     }
-
                     FEInterpreter.close();
                     ClInterpreter.close();
                 }
-                if (!isTrainingCanceled) {
+                if (!isTrainingCanceled) { //TODO: Handle (same)
                     System.out.println("All training phases completed");
                 }
                 else{
-                    System.out.println("Training process is stopped");
+                    System.out.println("Training process is stopped"); //TODO: Handle (same)
                 }
                 handler.post(this::finishTraining);
-
             } catch (IOException e) {
                 e.printStackTrace();
             }finally {
@@ -476,7 +729,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
-
     private void trainPhase(TrainingPhase phase, Interpreter FEInterpreter, Interpreter ClInterpreter) {
         List<TrainingSample> phaseSamples = phase.getSamples();
         int numEpochs = 2;
@@ -523,7 +775,6 @@ public class MainActivity extends AppCompatActivity {
                         long elapsedSeconds = (System.currentTimeMillis() - epochStartTime) / 1000;
 
                         String message = String.format(
-                                Locale.getDefault(),
                                 getString(R.string.training_phase_message),
                                 phase.getPhaseNumber(),
                                 epoch + 1,
@@ -536,14 +787,14 @@ public class MainActivity extends AppCompatActivity {
                         System.out.println(message);
                         updateTrainingProgress(message);
                     }
-                } catch (IOException e) {
+                } catch (IOException e) { //TODO: Handle (same)
                     System.out.println("Error processing sample from class " + sample.label + ": " + e.getMessage());
                     failedSamples++;
                 }
             }
 
             System.out.println(String.format(
-                    Locale.getDefault(),
+                    Locale.getDefault(), //TODO: what it do?
                     getString(R.string.phase_epoch_summary),
                     phase.getPhaseNumber(),
                     epoch + 1,
@@ -553,40 +804,33 @@ public class MainActivity extends AppCompatActivity {
             ));
         }
     }
-
     private MappedByteBuffer loadModelBuffer(File modelFile) throws IOException {
         FileInputStream inputStream = new FileInputStream(modelFile);
         FileChannel fileChannel = inputStream.getChannel();
         return fileChannel.map(FileChannel.MapMode.READ_ONLY, 0, fileChannel.size());
     }
-
     public class TrainingPhase {
         private final List<TrainingSample> samples;
         private final int startIndex;
         private final int endIndex;
         private final int phaseNumber;
-
         private TrainingPhase(List<TrainingSample> samples, int startIndex, int endIndex, int phaseNumber) {
             this.samples = samples;
             this.startIndex = startIndex;
             this.endIndex = endIndex;
             this.phaseNumber = phaseNumber;
         }
-
         private List<TrainingSample> getSamples() {
             return samples.subList(startIndex, endIndex);
         }
-
         public int getPhaseNumber() {
             return phaseNumber;
         }
     }
-
     // Helper class to keep image and label together
     private static class TrainingSample {
         final DocumentFile imageFile;
         final int label;
-
         TrainingSample(DocumentFile imageFile, int label) {
             this.imageFile = imageFile;
             this.label = label;
@@ -596,7 +840,6 @@ public class MainActivity extends AppCompatActivity {
         Intent intent = new Intent(this, TrainingActivity.class);
         startActivity(intent);
     }
-
     private void finishTraining() {
         Intent intent = new Intent(this, MainActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -612,13 +855,8 @@ public class MainActivity extends AppCompatActivity {
     }
     private void performInference(Interpreter featureExtractor, Interpreter classifier, ByteBuffer input) {
         try {
-            System.out.println("Input shape: " + Arrays.toString(featureExtractor.getInputTensor(0).shape()));
-
             TensorBuffer inputFeature0 = TensorBuffer.createFixedSize(new int[]{1, 28, 28, 1}, DataType.FLOAT32);
             inputFeature0.loadBuffer(input);
-
-            System.out.println("Input tensor size: " + inputFeature0.getFlatSize());
-            System.out.println("Input buffer capacity: " + input.capacity());
 
             TensorBuffer extractedFeatures = TensorBuffer.createFixedSize(new int[]{1, 1024}, DataType.FLOAT32);
             featureExtractor.run(inputFeature0.getBuffer(), extractedFeatures.getBuffer());
@@ -632,7 +870,6 @@ public class MainActivity extends AppCompatActivity {
             classifier.runForMultipleInputsOutputs(new Object[]{extractedFeatures.getBuffer()}, outputs);
 
             float[] results = outputFeature1.getFloatArray();
-
 
             String[] classes = {"0", "1", "2", "3","4","5","6","7","8","9"};
             int maxPos = 0;
@@ -653,17 +890,16 @@ public class MainActivity extends AppCompatActivity {
                         .append("%\n");
             }
 
-            result.append("\nProbabilities:\n" + probabilitiesString);
+//            result.append("\nProbabilities:\n" + probabilitiesString);
             System.out.println("Probabilities breakdown:\n" + probabilitiesString);
 
         } catch (Exception e) {
-            e.printStackTrace();
+            e.printStackTrace(); //TODO: Handle
             System.out.println("Error during inference: " + e.getMessage());
         }
     }
-    // Helper function to save model weights to checkpoint
     private void saveCheckpoint(Interpreter interpreter) {
-        if (interpreter == null) {
+        if (interpreter == null) { //TODO: Handle
             System.out.println("Interpreter is null. Cannot save checkpoint.");
             return;
         }
@@ -674,14 +910,13 @@ public class MainActivity extends AppCompatActivity {
             Map<String, Object> outputs = new HashMap<>();
             interpreter.runSignature(inputs, outputs, "save");
             System.out.println("Model weights saved to: " + outputFile.getAbsolutePath());
-        } catch (Exception e) {
+        } catch (Exception e) { //TODO: Handle?
             System.err.println("Error while saving checkpoint: " + e.getMessage());
             e.printStackTrace();
         }
     }
-    // Helper function to restore model weights from checkpoint
     private void restoreCheckpoint(Interpreter interpreter) {
-        if (interpreter == null) {
+        if (interpreter == null) { //TODO: Handle (same)
             System.out.println("Interpreter is null. Cannot restore checkpoint.");
             return;
         }
@@ -700,25 +935,21 @@ public class MainActivity extends AppCompatActivity {
             System.out.println("Model weights restored from: " + outputFile.getAbsolutePath());
         } catch (Exception e) {
             System.err.println("Error while restoring checkpoint: " + e.getMessage());
-            e.printStackTrace();
+            e.printStackTrace(); //TODO: Handle (same)
         }
     }
-    // Helper function to preprocess image
     private ByteBuffer preprocessImage(Bitmap image) {
         int modelWidth = 28;
         int modelHeight = 28;
         int channels = 1;  // Grayscale image
         int pixelSize = 4;  // Float32 takes 4 bytes
 
-        // Allocate buffer with correct size
         ByteBuffer byteBuffer = ByteBuffer.allocateDirect(modelWidth * modelHeight * channels * pixelSize);
         byteBuffer.order(ByteOrder.nativeOrder());
 
-        // Convert to grayscale and get pixel values
         int[] pixels = new int[modelWidth * modelHeight];
         image.getPixels(pixels, 0, modelWidth, 0, 0, modelWidth, modelHeight);
 
-        // Convert the image to float and normalize
         for (int pixel : pixels) {
             // Convert to grayscale using standard conversion formula
             float grayValue = (((pixel >> 16) & 0xFF) * 0.299f +
@@ -777,7 +1008,7 @@ public class MainActivity extends AppCompatActivity {
 
                 DocumentFile directory = DocumentFile.fromTreeUri(this, folderUri);
                 if (directory != null && directory.isDirectory()) {
-                    classifyAndTrainOnAllClasses(directory);
+                    classifyAndTrainOnAllClasses2(directory);
                 }
             }
         }

@@ -11,8 +11,25 @@
     <string name="launch_gallery">Відкрити галерею</string>
     <string name="classify">Класифікується як:</string>
     <string name="training_phase_message">Фаза %1$d - Епоха %2$d/%3$d: %4$.1f%% завершено (%5$d/%6$d зразків) | Час: %7$ds</string>
+    <string name="training_message">Епоха %1$d/%2$d: %3$.1f%% пройдено (%4$d/%5$d зразки) | Час: %6$dс</string>
+    <string name="class_preparing">Клас %1$d: знайдено %2$d зображень</string>
     <string name="phase_epoch_summary">Фаза %1$d - Епоха %2$d/%3$d завершена | Успішно: %4$d | Неуспішно: %5$d</string>
     <string name="cancel_training_message">Ви впевнені, що хочете відмінити тренування? Результати тренування будуть втрачені</string>
     <string name="positive_button_text">Так, скасувати</string>
     <string name="negative_button_text">Ні, повернутися</string>
+    <string name="folder_length_error_message">Клас (%1$d) не має зображень. Тренування призупинене.</string>
+    <string name="class_length_error_message">Клас (%1$d) має менше ніж 100 зображень. Тренування призупинене.</string>
+    <string name="difference_error_message">Різниця між класами дуже велика. У (%1$d) рази. Тренування призупинене.</string>
+    <string name="error_sending_weights">Помилка надсилання ваг:</string>
+    <string name="weights_sent_successfully">Ваги успішно надіслано на сервер</string>
+    <string name="loading_model">Завантаження моделі..</string>
+    <string name="model_downloaded_successfully">Модель успішно завантажена</string>
+    <string name="failed_to_download_model">Не вдалося завантажити модель: %1$s</string>
+    <string name="downloaded_model_empty">Завантажений файл моделі є порожній</string>
+    <string name="downloaded_model_empty">З</string>
+    <string name="error_loading_model">Помилка завантаження моделі: %1$s</string>
+    <string name="error_generic">Помилка: %1$s</string>
+    <string name="success_title">Успіх</string>
+    <string name="error_title">Помилка</string>
+    <string name="error_title">П</string>
 </resources>

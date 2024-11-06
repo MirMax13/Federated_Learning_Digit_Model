@@ -10,8 +10,23 @@
     <string name="launch_gallery">Launch Gallery</string>
     <string name="classify">Classified as:</string>
     <string name="training_phase_message">Phase %1$d - Epoch %2$d/%3$d: %4$.1f%% complete (%5$d/%6$d samples) | Time: %7$ds</string>
+    <string name="training_message">Epoch %1$d/%2$d: %3$.1f%% complete (%4$d/%5$d samples) | Time: %6$ds</string>
+    <string name="class_preparing">Class %1$d: found %2$d images</string>
     <string name="phase_epoch_summary">Phase %1$d - Epoch %2$d/%3$d completed | Successful: %4$d | Failed: %5$d</string>
     <string name="cancel_training_message">Are you sure you want to cancel the workout? The training results will be lost</string>
     <string name="positive_button_text">Yes, cancel</string>
     <string name="negative_button_text">No, return</string>
+    <string name="class_length_error_message">Class (%1$d) has less than 100 images. Training aborted.</string>
+    <string name="difference_error_message">Difference between classes is too large In (%1$d) times. Training aborted.</string>
+    <string name="folder_length_error_message">Class (%1$d) has no images. Training aborted.</string>
+    <string name="error_sending_weights">Error sending weights: </string>
+    <string name="weights_sent_successfully">Weights successfully sent to the server</string>
+    <string name="loading_model">Loading model…</string>
+    <string name="model_downloaded_successfully">Model downloaded successfully</string>
+    <string name="failed_to_download_model">Failed to download model: %1$s</string>
+    <string name="downloaded_model_empty">Downloaded model file is empty</string>
+    <string name="error_loading_model">Error loading model: %1$s</string>
+    <string name="error_generic">Error: %1$s</string>
+    <string name="success_title">Success</string>
+    <string name="error_title">Error</string>
 </resources>

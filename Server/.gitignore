@@ -8,3 +8,4 @@
 /checkpoint.ckpt
 /venv
 classifier_model.tflite
+data_pc.zip

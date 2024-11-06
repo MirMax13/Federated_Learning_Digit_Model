@@ -36,7 +36,6 @@ def convert_to_tflite():
     print(f"TFLite model saved. First 10 bytes: {list(cl_model_tflite[:10])}")
 
 def aggregate():
-    print("Aggregate function started", flush=True)
     checkpoint_files = [os.path.join(CHECKPOINT_DIR, f) for f in os.listdir(CHECKPOINT_DIR) if f.endswith('.ckpt')]
 
     if not checkpoint_files:
@@ -45,7 +44,6 @@ def aggregate():
     all_weights = []
 
     for checkpoint in checkpoint_files:
-        print(f"Processing checkpoint: {checkpoint}", flush=True)
         
         if not os.path.exists(checkpoint) or os.path.getsize(checkpoint) == 0:
             print(f"Checkpoint {checkpoint} is empty or does not exist", flush=True)
@@ -72,9 +70,7 @@ def save_model():
     
 @app.route('/load_model', methods=['GET'])
 def load_model():
-    print("Calling aggregate", flush=True)
     aggregate()
-    print("Aggregate completed", flush=True)
     sh.rmtree(SAVED_MODEL_DIR_CL)
     save_model()
     convert_to_tflite()

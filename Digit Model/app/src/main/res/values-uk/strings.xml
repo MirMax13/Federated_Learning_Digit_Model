@@ -26,10 +26,8 @@
     <string name="model_downloaded_successfully">Модель успішно завантажена</string>
     <string name="failed_to_download_model">Не вдалося завантажити модель: %1$s</string>
     <string name="downloaded_model_empty">Завантажений файл моделі є порожній</string>
-    <string name="downloaded_model_empty">З</string>
     <string name="error_loading_model">Помилка завантаження моделі: %1$s</string>
     <string name="error_generic">Помилка: %1$s</string>
     <string name="success_title">Успіх</string>
     <string name="error_title">Помилка</string>
-    <string name="error_title">П</string>
 </resources>

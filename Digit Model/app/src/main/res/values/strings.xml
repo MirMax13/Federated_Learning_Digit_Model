@@ -26,7 +26,10 @@
     <string name="failed_to_download_model">Failed to download model: %1$s</string>
     <string name="downloaded_model_empty">Downloaded model file is empty</string>
     <string name="error_loading_model">Error loading model: %1$s</string>
-    <string name="error_generic">Error: %1$s</string>
+    <string name="error_generic">Error: </string>
     <string name="success_title">Success</string>
     <string name="error_title">Error</string>
+    <string name="model_file_error">TFLite model file %1$s not found.</string>
+    <string name="training_completed">Training completed. Saving checkpoint…</string>
+    <string name="interpreter_null">Interpreter is null. Cannot save or restore checkpoint</string>
 </resources>

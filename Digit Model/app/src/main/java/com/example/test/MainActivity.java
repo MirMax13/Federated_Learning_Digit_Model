@@ -42,6 +42,7 @@ import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.sql.Struct;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -74,6 +75,14 @@ public class MainActivity extends AppCompatActivity {
     private boolean isTrainingCanceled = false;
     private static final String PREFS_NAME = "app_prefs";
     private static final String SAVED_URI_KEY = "saved_directory_uri";
+    String ExceptionOccurred = getString(R.string.error_generic);
+    String error_title = getString(R.string.error_title);
+    String success_title = getString(R.string.success_title);
+
+    String interpreter_error = String.format(
+            Locale.getDefault(),
+            getString(R.string.interpreter_null)
+    );
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -132,6 +141,7 @@ public class MainActivity extends AppCompatActivity {
             serverIp = new String(buffer);
             serverIp = serverIp.trim();
         } catch (IOException e) {
+            showResultDialog(error_title,ExceptionOccurred + e.getMessage());
             e.printStackTrace();
         }
         return serverIp;
@@ -185,7 +195,7 @@ public class MainActivity extends AppCompatActivity {
 
                     return true;
                 } catch (IOException e) {
-                    message = getString(R.string.error_generic, e.getMessage());
+                    message = ExceptionOccurred + e.getMessage();
                     return false;
                 }
             }
@@ -195,7 +205,7 @@ public class MainActivity extends AppCompatActivity {
                 hideLoadingDialog();
 
                 showResultDialog(
-                        isSuccess ? getString(R.string.success_title) : getString(R.string.error_title),
+                        isSuccess ? success_title : error_title,
                         message
                 );
             }
@@ -266,7 +276,7 @@ public class MainActivity extends AppCompatActivity {
                     System.err.println("Error sending weights: " + e.getMessage());
                     e.printStackTrace();
 
-                    runOnUiThread(() -> showResultDialog(getString(R.string.error_title), errorSendingWeights + e.getMessage()));
+                    runOnUiThread(() -> showResultDialog(error_title, errorSendingWeights + e.getMessage()));
                 }
 
                 @Override
@@ -274,18 +284,17 @@ public class MainActivity extends AppCompatActivity {
                     if (response.isSuccessful()) {
                         System.out.println("Weights successfully sent to the server.");
                         String weightsSentSuccessfully = getString(R.string.weights_sent_successfully);
-                        runOnUiThread(() -> showResultDialog(getString(R.string.success_title), weightsSentSuccessfully));
+                        runOnUiThread(() -> showResultDialog(success_title, weightsSentSuccessfully));
                     } else {
-                        System.err.println("Failed to send weights: " + response.message());runOnUiThread(() -> showResultDialog(getString(R.string.error_title), errorSendingWeights + response.message()));
+                        System.err.println("Failed to send weights: " + response.message());runOnUiThread(() -> showResultDialog(error_title, errorSendingWeights + response.message()));
                     }
                 }
             });
 
         } catch (IOException e) {
-            String ioExceptionOccurred = getString(R.string.error_generic);
-            System.err.println(ioExceptionOccurred + e.getMessage());
+            System.err.println(ExceptionOccurred + e.getMessage());
             e.printStackTrace();
-            showResultDialog(getString(R.string.error_title), ioExceptionOccurred + e.getMessage());
+            showResultDialog(error_title, ExceptionOccurred + e.getMessage());
         }
     }
     private void copyModelFromAssetsIfNecessary(String modelFileName) {
@@ -306,11 +315,30 @@ public class MainActivity extends AppCompatActivity {
                 System.out.println("Model copied to " + modelFile.getAbsolutePath());
             } catch (IOException e) {
                 e.printStackTrace();
+                showResultDialog(error_title,ExceptionOccurred + e.getMessage());
                 System.out.println("Failed to copy model from assets: " + e.getMessage());
             }
         } else {
             System.out.println("Model file already exists at " + modelFile.getAbsolutePath());
         }
+    }
+
+    private boolean checkModelFilesExistence(File featureExtractorFile, File classifierFile, String FE_modelFileName, String Cl_modelFileName, String error_title) {
+        if (!featureExtractorFile.exists() || !classifierFile.exists()) {
+            String file_error = "";
+
+            if (!classifierFile.exists()) {
+                System.out.println("TFLite model file '" + FE_modelFileName + "' not found.");
+                file_error = String.format(getString(R.string.model_file_error), FE_modelFileName);
+            } else {
+                System.out.println("TFLite model file '" + Cl_modelFileName + "' not found.");
+                file_error = String.format(getString(R.string.model_file_error), Cl_modelFileName);
+            }
+
+            showResultDialog(error_title, file_error);
+            return false;
+        }
+        return true;
     }
     public void classifyImageWithInference(Bitmap image) {
         try {
@@ -322,15 +350,8 @@ public class MainActivity extends AppCompatActivity {
             File featureExtractorFile = new File(getFilesDir(), FE_modelFileName);
             File classifierFile = new File(getFilesDir(), Cl_modelFileName);
 
-            if (!featureExtractorFile.exists()) {
-                System.out.println("TFLite model file '" + FE_modelFileName + "' not found.");
+            if (!checkModelFilesExistence(featureExtractorFile, classifierFile, FE_modelFileName, Cl_modelFileName, error_title)) {
                 return;
-                //TODO: Handle error
-            }
-            if (!classifierFile.exists()) {
-                System.out.println("TFLite model file '" + Cl_modelFileName + "' not found.");
-                return;
-                //TODO: Handle error
             }
             System.out.println("TFLite models found, proceeding...");
 
@@ -371,10 +392,12 @@ public class MainActivity extends AppCompatActivity {
 
         } catch (IOException e) {
             e.printStackTrace();
-            System.out.println("Error: " + e.getMessage()); //TODO: Handle error
+            showResultDialog(error_title,ExceptionOccurred + e.getMessage());
+            System.out.println("Error: " + e.getMessage());
         } catch (Exception e) {
             e.printStackTrace();
-            System.out.println("Unexpected error: " + e.getMessage()); //TODO: Handle error
+            showResultDialog(error_title,ExceptionOccurred + e.getMessage());
+            System.out.println("Unexpected error: " + e.getMessage());
         }
     }
 
@@ -393,9 +416,8 @@ public class MainActivity extends AppCompatActivity {
                 File featureExtractorFile = new File(getFilesDir(), FE_modelFileName);
                 File classifierFile = new File(getFilesDir(), Cl_modelFileName);
 
-                if (!featureExtractorFile.exists() || !classifierFile.exists()) {
-                    System.out.println("Required model files not found.");
-                    return; //TODO: Handle error
+                if (!checkModelFilesExistence(featureExtractorFile, classifierFile, FE_modelFileName, Cl_modelFileName, error_title)) {
+                    return;
                 }
                 System.out.println("TFLite models found, proceeding...");
 
@@ -429,7 +451,7 @@ public class MainActivity extends AppCompatActivity {
                     int correctLabel = Integer.parseInt(classDir.getName());
                     DocumentFile[] imageFiles = classDir.listFiles();
 
-                    if (imageFiles.length == 0) {
+                    if (imageFiles.length == 0) { //TODO: Reuse ?
                         cancelTraining();
                         String folder_length_error_message = String.format(
                                 Locale.getDefault(),
@@ -465,7 +487,7 @@ public class MainActivity extends AppCompatActivity {
                     updateTrainingProgress(message);
                 }
                 for (Map.Entry<Integer, Integer> entry : classImageCounts.entrySet()) {
-                    if (entry.getValue() < 100) {
+                    if (entry.getValue() < 100) { //TODO: Reuse?
                         cancelTraining();
                         String class_length_error_message = String.format(
                                 Locale.getDefault(),
@@ -485,7 +507,7 @@ public class MainActivity extends AppCompatActivity {
                 }
                 int minImages = Collections.min(classImageCounts.values());
                 int maxImages = Collections.max(classImageCounts.values());
-                if ((double) maxImages / minImages > 4.5) {
+                if ((double) maxImages / minImages > 4.5) { //TODO: Reuse?
                     int difference = maxImages/ minImages;
                     cancelTraining();
                     String difference_error_message = String.format(
@@ -563,7 +585,8 @@ public class MainActivity extends AppCompatActivity {
                                 System.out.println(message);
                                 updateTrainingProgress(message);
                             }
-                        } catch (IOException e) { //TODO: Handle error
+                        } catch (IOException e) {
+                            showResultDialog(error_title,ExceptionOccurred + e.getMessage());
                             System.out.println("Error processing sample from class " + sample.label + ": " + e.getMessage());
                             e.printStackTrace();
                         }
@@ -571,7 +594,7 @@ public class MainActivity extends AppCompatActivity {
 
                 }
 
-                if (!isTrainingCanceled) { //TODO: Handle output
+                if (!isTrainingCanceled) { //TODO: Check Alert
                     System.out.println("\nTraining completed. Saving checkpoint...");
                     saveCheckpoint(ClInterpreter);
                 }
@@ -582,6 +605,7 @@ public class MainActivity extends AppCompatActivity {
                 ClInterpreter.close();
                 handler.post(this::finishTraining);
             } catch (IOException e) {
+                showResultDialog(error_title,ExceptionOccurred + e.getMessage());
                 e.printStackTrace();
             }
             finally {
@@ -606,9 +630,8 @@ public class MainActivity extends AppCompatActivity {
                 File featureExtractorFile = new File(getFilesDir(), FE_modelFileName);
                 File classifierFile = new File(getFilesDir(), Cl_modelFileName);
 
-                if (!featureExtractorFile.exists() || !classifierFile.exists()) {
-                    System.out.println("Required model files not found.");
-                    return; //TODO: Handle (same)
+                if (!checkModelFilesExistence(featureExtractorFile, classifierFile, FE_modelFileName, Cl_modelFileName, error_title)) {
+                    return;
                 }
 
                 // Collect all samples first
@@ -625,9 +648,21 @@ public class MainActivity extends AppCompatActivity {
                     int correctLabel = Integer.parseInt(classDir.getName());
                     DocumentFile[] imageFiles = classDir.listFiles();
 
-                    if (imageFiles.length == 0) { //TODO: Handle (same)
-                        System.out.println("Class " + correctLabel + " has no images. Training aborted.");
+                    if (imageFiles.length == 0) {
                         cancelTraining();
+                        String folder_length_error_message = String.format(
+                                Locale.getDefault(),
+                                getString(R.string.folder_length_error_message),
+                                correctLabel
+                        );
+                        handler.post(() -> {
+                            if (TrainingActivity.getInstance() != null) {
+                                TrainingActivity.getInstance().checkAndShowErrorDialog(folder_length_error_message);
+                            } else {
+                                System.out.println("TrainingActivity instance not found.");
+                            }
+                        });
+                        System.out.println(folder_length_error_message);
                         return;
                     }
 
@@ -649,18 +684,36 @@ public class MainActivity extends AppCompatActivity {
                     updateTrainingProgress(message);
                 }
 
-                for (Map.Entry<Integer, Integer> entry : classImageCounts.entrySet()) { //TODO: Handle (same)
+                for (Map.Entry<Integer, Integer> entry : classImageCounts.entrySet()) {
                     if (entry.getValue() < 100) {
-                        System.out.println("Class " + entry.getKey() + " has less than 100 images. Training aborted.");
+                        String class_length_error_message = String.format(
+                                Locale.getDefault(),
+                                getString(R.string.class_length_error_message),
+                                entry.getKey()
+                        );
+                        System.out.println(class_length_error_message);
                         cancelTraining();
                         return;
                     }
                 }
                 int minImages = Collections.min(classImageCounts.values());
                 int maxImages = Collections.max(classImageCounts.values());
-                if ((double) maxImages / minImages > 4.5) { //TODO: Handle (same)
-                    System.out.println("Difference between classes is too large. Training aborted.");
+                if ((double) maxImages / minImages > 4.5) {
+                    int difference = maxImages/ minImages;
                     cancelTraining();
+                    String difference_error_message = String.format(
+                            Locale.getDefault(),
+                            getString(R.string.difference_error_message),
+                            difference
+                    );
+                    handler.post(() -> {
+                        if (TrainingActivity.getInstance() != null) {
+                            TrainingActivity.getInstance().checkAndShowErrorDialog(difference_error_message);
+                        } else {
+                            System.out.println("TrainingActivity instance not found.");
+                        }
+                    });
+                    System.out.println(difference_error_message);
                     return;
                 }
 
@@ -715,14 +768,15 @@ public class MainActivity extends AppCompatActivity {
                     FEInterpreter.close();
                     ClInterpreter.close();
                 }
-                if (!isTrainingCanceled) { //TODO: Handle (same)
+                if (!isTrainingCanceled) {
                     System.out.println("All training phases completed");
                 }
                 else{
-                    System.out.println("Training process is stopped"); //TODO: Handle (same)
+                    System.out.println("Training process is stopped");
                 }
                 handler.post(this::finishTraining);
             } catch (IOException e) {
+                showResultDialog(error_title,ExceptionOccurred + e.getMessage());
                 e.printStackTrace();
             }finally {
                 executor.shutdown();
@@ -787,14 +841,15 @@ public class MainActivity extends AppCompatActivity {
                         System.out.println(message);
                         updateTrainingProgress(message);
                     }
-                } catch (IOException e) { //TODO: Handle (same)
+                } catch (IOException e) {
+                    showResultDialog(error_title,ExceptionOccurred + e.getMessage());
                     System.out.println("Error processing sample from class " + sample.label + ": " + e.getMessage());
                     failedSamples++;
                 }
             }
 
             System.out.println(String.format(
-                    Locale.getDefault(), //TODO: what it do?
+                    Locale.getDefault(),
                     getString(R.string.phase_epoch_summary),
                     phase.getPhaseNumber(),
                     epoch + 1,
@@ -843,6 +898,12 @@ public class MainActivity extends AppCompatActivity {
     private void finishTraining() {
         Intent intent = new Intent(this, MainActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+        System.out.println("\nTraining completed. Saving checkpoint...");
+        String message = String.format(
+                Locale.getDefault(),
+                getString(R.string.training_completed)
+        );
+        showResultDialog(success_title,message);
         startActivity(intent);
     }
     public void cancelTraining() {
@@ -894,13 +955,20 @@ public class MainActivity extends AppCompatActivity {
             System.out.println("Probabilities breakdown:\n" + probabilitiesString);
 
         } catch (Exception e) {
-            e.printStackTrace(); //TODO: Handle
+            showResultDialog(error_title,ExceptionOccurred + e.getMessage());
+            e.printStackTrace();
             System.out.println("Error during inference: " + e.getMessage());
         }
     }
+    private boolean checkInterpreterInitialized(Interpreter interpreter) {
+        if (interpreter == null) {
+            showResultDialog(error_title,interpreter_error);
+            System.out.println(interpreter_error);
+        }
+        return true;
+    }
     private void saveCheckpoint(Interpreter interpreter) {
-        if (interpreter == null) { //TODO: Handle
-            System.out.println("Interpreter is null. Cannot save checkpoint.");
+        if (!checkInterpreterInitialized(interpreter)) {
             return;
         }
         try {
@@ -910,14 +978,14 @@ public class MainActivity extends AppCompatActivity {
             Map<String, Object> outputs = new HashMap<>();
             interpreter.runSignature(inputs, outputs, "save");
             System.out.println("Model weights saved to: " + outputFile.getAbsolutePath());
-        } catch (Exception e) { //TODO: Handle?
+        } catch (Exception e) {
+            showResultDialog(error_title,ExceptionOccurred + e.getMessage());
             System.err.println("Error while saving checkpoint: " + e.getMessage());
             e.printStackTrace();
         }
     }
     private void restoreCheckpoint(Interpreter interpreter) {
-        if (interpreter == null) { //TODO: Handle (same)
-            System.out.println("Interpreter is null. Cannot restore checkpoint.");
+        if (!checkInterpreterInitialized(interpreter)) {
             return;
         }
 
@@ -934,8 +1002,9 @@ public class MainActivity extends AppCompatActivity {
             interpreter.runSignature(inputs, outputs, "restore");
             System.out.println("Model weights restored from: " + outputFile.getAbsolutePath());
         } catch (Exception e) {
+            showResultDialog(error_title,ExceptionOccurred + e.getMessage());
             System.err.println("Error while restoring checkpoint: " + e.getMessage());
-            e.printStackTrace(); //TODO: Handle (same)
+            e.printStackTrace();
         }
     }
     private ByteBuffer preprocessImage(Bitmap image) {
@@ -986,6 +1055,7 @@ public class MainActivity extends AppCompatActivity {
                     image = MediaStore.Images.Media.getBitmap(this.getContentResolver(),dat);
 
                 } catch (IOException e) {
+                    showResultDialog(error_title,ExceptionOccurred + e.getMessage());
                     e.printStackTrace();
                 }
                 imageView.setImageBitmap(image);

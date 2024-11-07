@@ -27,7 +27,10 @@
     <string name="failed_to_download_model">Не вдалося завантажити модель: %1$s</string>
     <string name="downloaded_model_empty">Завантажений файл моделі є порожній</string>
     <string name="error_loading_model">Помилка завантаження моделі: %1$s</string>
-    <string name="error_generic">Помилка: %1$s</string>
+    <string name="error_generic">"Помилка: "</string>
     <string name="success_title">Успіх</string>
     <string name="error_title">Помилка</string>
+    <string name="model_file_error">Файл моделі TFLite %1$s не знайдено.</string>
+    <string name="training_completed">Тренування завершено. Збереження контрольної точки...</string>
+    <string name="interpreter_null">Інтерпретатор порожній. Неможливо зберегти чи відновити контрольну точку</string>
 </resources>

@@ -1,5 +1,5 @@
 
 config.txt
 classifier_model.tflite
-
+*.ckpt
 network_security_config.xml
